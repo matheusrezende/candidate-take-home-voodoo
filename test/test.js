@@ -21,6 +21,7 @@ let androidGame = {
   appVersion: "1.0.0",
   isPublished: true,
 };
+
 /**
  * Testing create game endpoint
  */
@@ -227,5 +228,29 @@ describe("GET /api/games", () => {
     assert.strictEqual(status, 200);
     assert.strictEqual(body.length, 1);
     assert.strictEqual(body[0].id, 2);
+  });
+});
+
+describe("POST /api/games/populate", () => {
+  it("the database is populated with all the data passed", async () => {
+    // We could improve here the speed of the test by faking the api call
+    // but I couldn't manage to add a mock for the fetch files using sinon
+
+    // We populate the database and below we search for a game that was added, in this case minecraft is one of them
+    // matching the name exactly is not really future proof so mocking would be the best solution here
+    const { status: populateStatusCode } = await request(app)
+      .post("/api/games/populate")
+      .set("Accept", "application/json");
+
+    assert.strictEqual(populateStatusCode, 204);
+
+    const { body, status } = await request(app)
+      .post("/api/games/search")
+      .set("Accept", "application/json")
+      .send({ name: "minecraft" });
+
+    assert.strictEqual(status, 200);
+    assert.strictEqual(body.length, 2);
+    assert.strictEqual(body[0].name, "Minecraft");
   });
 });
