@@ -2,6 +2,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const { Op } = require("sequelize");
 const db = require("./models");
+const { fetchFiles } = require("./helpers/http");
+const { getTop100, gameMapper } = require("./helpers/gamesHelpers");
 
 const app = express();
 
@@ -121,6 +123,35 @@ app.post("/api/games/search", async (req, res) => {
     const games = await db.Game.findAll(queryObject);
 
     return res.send(games);
+  } catch (err) {
+    console.error("***Error searching games", err);
+    return res.status(400).send(err);
+  }
+});
+
+app.post("/api/games/populate", async (_, res) => {
+  try {
+    const [iosData, androidData] = await fetchFiles();
+
+    const iosTop100 = getTop100(iosData);
+    const androidTop100 = getTop100(androidData);
+
+    const data = iosTop100
+      .concat(androidTop100)
+      .map((item) => gameMapper(item));
+
+    await db.Game.bulkCreate(data, {
+      updateOnDuplicate: [
+        "publisherId",
+        "name",
+        "appVersion",
+        "isPublished",
+        "platform",
+        "bundleId",
+      ],
+    });
+
+    return res.status(204).end();
   } catch (err) {
     console.error("***Error searching games", err);
     return res.status(400).send(err);
